@@ -116,19 +116,23 @@ async function main() {
   const sizeScales = buildSizeScales(api.calibration)
 
   // Precompute halo bands from slope changes (WP8)
-  const haloBands: Record<string, number[]> = {}
-  for (const { id } of NODE_ORDER) {
-    const slope = series.nodes[id]?.slope ?? []
-    const bands: number[] = new Array(slope.length).fill(0)
-    let ema = 0
-    for (let t = 1; t < slope.length; t++) {
-      const dv = Math.abs((slope[t] ?? 0) - (slope[t - 1] ?? 0))
-      ema = 0.3 * dv + 0.7 * ema
-      // thresholds heuristic
-      bands[t] = ema > 0.6 ? 3 : ema > 0.3 ? 2 : ema > 0.1 ? 1 : 0
+  let haloBands: Record<string, number[]> = {}
+  function rebuildHaloBands() {
+    haloBands = {}
+    for (const { id } of NODE_ORDER) {
+      const slope = series.nodes[id]?.slope ?? []
+      const bands: number[] = new Array(slope.length).fill(0)
+      let ema = 0
+      for (let t = 1; t < slope.length; t++) {
+        const dv = Math.abs((slope[t] ?? 0) - (slope[t - 1] ?? 0))
+        ema = 0.3 * dv + 0.7 * ema
+        // thresholds heuristic
+        bands[t] = ema > 0.6 ? 3 : ema > 0.3 ? 2 : ema > 0.1 ? 1 : 0
+      }
+      haloBands[id] = bands
     }
-    haloBands[id] = bands
   }
+  rebuildHaloBands()
 
   scrubber.max = String(Math.max(0, tSeries.length - 1))
   scrubber.value = String(state.timeIndex)
@@ -183,8 +187,12 @@ async function main() {
       const passed = edgeEntries.filter(([, v]) => {
         const sync = v.sync[state.timeIndex] ?? 0
         const conf = v.conf[state.timeIndex] ?? 0
-        return Math.abs(sync) >= 0.25 && conf >= 0.25
+        return Math.abs(sync) >= 0.15 && conf >= 0.20
       })
+      console.log(`t=${state.timeIndex}, cond=${condKey}, passed=${passed.length}/${edgeEntries.length}, edgeEntries:`, edgeEntries.length)
+      if (passed.length > 0) {
+        console.log('Sample passed edge:', passed[0][0], 'sync=', passed[0][1].sync[state.timeIndex], 'conf=', passed[0][1].conf[state.timeIndex])
+      }
       // Top-K by conf*static_conn with distance fade
       const scoreWithGeom = passed.map(d => {
         const [a, b] = d[0].split('|')
@@ -201,7 +209,15 @@ async function main() {
       })
       const K = 12
       const visibleEdges = scoreWithGeom.sort((a,b)=>b.sc-a.sc).slice(0,K)
+      console.log('visibleEdges after Top-K:', visibleEdges.length)
+      if (visibleEdges.length > 0) {
+        console.log('First visible edge:', visibleEdges[0].d[0], 'dist=', visibleEdges[0].dist, 'sc=', visibleEdges[0].sc)
+      }
       const line = d3.line<{ x: number; y: number }>().curve(d3.curveLinear)
+      
+      // TEST: draw a static red line to confirm SVG rendering works
+      gEdges.append('line').attr('x1', cx-50).attr('y1', cy).attr('x2', cx+50).attr('y2', cy)
+        .attr('stroke', 'red').attr('stroke-width', 3)
       const edgesSel = gEdges.selectAll('path.edge')
         .data(visibleEdges, (e: any) => e.d[0])
         .join('path')
@@ -209,8 +225,12 @@ async function main() {
         .attr('fill', 'none')
         .attr('stroke', '#3b82f6')
         .attr('stroke-opacity', (e: any) => {
+          // combine confidence and distance fade
           const conf = e.d[1].conf[state.timeIndex] ?? 0
-          return Math.min(1, conf)
+          const base = Math.min(1, Math.max(0.2, conf))
+          const maxR = Math.min(W, H) * 0.5
+          const fade = 0.3 + 0.7 * (1 - Math.min(1, e.dist / maxR))
+          return Math.min(1, base * fade)
         })
         .attr('stroke-width', (e: any) => {
           // thickness = static_conn (scaled)
@@ -223,10 +243,17 @@ async function main() {
           const [a, b] = e.d[0].split('|')
           const ia = NODE_ORDER.findIndex(n => n.name === a)
           const ib = NODE_ORDER.findIndex(n => n.name === b)
-          if (ia < 0 || ib < 0) return ''
+          if (ia < 0 || ib < 0) {
+            console.warn('Edge node not found:', a, b, 'ia=', ia, 'ib=', ib)
+            return ''
+          }
           const na = nodesData[ia]
           const nb = nodesData[ib]
-          return line([{ x: na.x, y: na.y }, { x: nb.x, y: nb.y }]) || ''
+          const pathD = line([{ x: na.x, y: na.y }, { x: nb.x, y: nb.y }]) || ''
+          if (!pathD && visibleEdges.indexOf(e) === 0) {
+            console.log('First edge path:', a, '->', b, 'na:', na.x, na.y, 'nb:', nb.x, nb.y, 'd:', pathD)
+          }
+          return pathD
         })
 
       // simple flow indication via dash offset (push for sync>0, ping-pong for sync<0)
@@ -236,12 +263,6 @@ async function main() {
           const sync = e.d[1].sync[state.timeIndex] ?? 0
           const dir = sync >= 0 ? 1 : (state.timeIndex % 2 === 0 ? 1 : -1)
           return String((-state.timeIndex * 2) * dir)
-        })
-        .attr('opacity', (e: any) => {
-          // distance fade
-          const maxR = Math.min(W, H) * 0.5
-          const fade = 1 - Math.min(1, e.dist / maxR)
-          return 0.3 + 0.7 * fade
         })
 
       // Nodes
@@ -334,6 +355,7 @@ async function main() {
     condKey = String(state.condition)
     series = api.conditions[condKey].series
     tSeries = series.t
+    rebuildHaloBands()
     scrubber.max = String(Math.max(0, tSeries.length - 1))
     state.timeIndex = Math.min(state.timeIndex, tSeries.length - 1)
     scrubber.value = String(state.timeIndex)
