@@ -1,0 +1,68 @@
+{
+  "nodes": {
+    "node_cardiac_rhythm": {
+      "units": "a.u.",
+      "transform": "identity",
+      "inverse": "identity",
+      "precision": 3,
+      "mu": 53.97070041369759,
+      "sigma": 37.19145026416591
+    },
+    "node_heart_rate": {
+      "units": "bpm",
+      "transform": "identity",
+      "inverse": "identity",
+      "precision": 1,
+      "mu": 77.66106733984432,
+      "sigma": 17.156897358349234
+    },
+    "node_breathing_rate": {
+      "units": "breaths/min",
+      "transform": "identity",
+      "inverse": "identity",
+      "precision": 1,
+      "mu": 18.21120503480587,
+      "sigma": 4.240153027160829
+    },
+    "node_breathing_depth": {
+      "units": "a.u.",
+      "transform": "identity",
+      "inverse": "identity",
+      "precision": 2,
+      "mu": 4.1833249836868065,
+      "sigma": 2.0092514008650704
+    },
+    "node_sweat_level": {
+      "units": "\u00b5S",
+      "transform": "log1p",
+      "inverse": "expm1",
+      "precision": 3,
+      "mu": 0.7223879970729475,
+      "sigma": 0.5986823510318076
+    },
+    "node_sweat_reactivity": {
+      "units": "SCR/min",
+      "transform": "identity",
+      "inverse": "identity",
+      "precision": 2,
+      "mu": 4178.463061690784,
+      "sigma": 2730.9675113318553
+    },
+    "node_skin_temperature": {
+      "units": "\u00b0C",
+      "transform": "identity",
+      "inverse": "identity",
+      "precision": 2,
+      "mu": 32.7308164826098,
+      "sigma": 1.5662083332013177
+    },
+    "node_muscle_tension": {
+      "units": "\u00b5V",
+      "transform": "log1p",
+      "inverse": "expm1",
+      "precision": 3,
+      "mu": 0.011352529932253065,
+      "sigma": 0.005298015240587583
+    }
+  }
+}
