@@ -57,39 +57,124 @@ function buildSizeScales(cal: GroupAPI['calibration']) {
   for (const { id } of NODE_ORDER) {
     const m = cal.nodes[id]
     // larger pixel range for visibility in light mode
-    const s = buildSizeScale(m.mu, m.sigma, 14, 40)
+    const s = buildSizeScale(m.mu, m.sigma, 24, 68)
     scales[id] = s
   }
   return scales
 }
 
-function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>) {
+function buildTopArcPath(r: number): string {
+  const startAngle = Math.PI
+  const endAngle = 0
+  const start = polar(0, 0, r, startAngle)
+  const end = polar(0, 0, r, endAngle)
+  const largeArcFlag = 0
+  const sweepFlag = 0
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`
+}
+
+function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>, animationTime: number) {
   containerSel.selectAll('*').remove()
   const x0 = 10, y0 = 10
-  containerSel.append('text').text('Legend').attr('x', x0).attr('y', y0+10).attr('fill', '#6b7280').attr('font-size', 12)
-  // Replica node
-  const lg = containerSel.append('g').attr('transform', `translate(${x0+10}, ${y0+30})`)
-  const baselineR = 18, mainR = 12, tickR = 16
-  lg.append('circle').attr('r', baselineR).attr('fill', '#9ca3af').attr('fill-opacity', 0.3)
-  // halo ring
-  lg.append('circle').attr('r', mainR+6).attr('fill', 'none').attr('stroke', '#2563eb').attr('stroke-opacity', 0.2).attr('stroke-width', 8)
-  lg.append('circle').attr('r', mainR).attr('fill', '#93c5fd')
-  lg.append('circle').attr('r', tickR).attr('fill', 'none').attr('stroke', '#111827').attr('stroke-width', 1.5)
-  containerSel.append('text').text('Radius = Δ vs baseline (level_z)').attr('x', x0+50).attr('y', y0+34).attr('fill', '#6b7280').attr('font-size', 12)
-  containerSel.append('text').text('Size = raw now; inner = baseline mean; tick = condition mean').attr('x', x0+50).attr('y', y0+50).attr('fill', '#6b7280').attr('font-size', 12)
-  containerSel.append('text').text('Halo = activity bands').attr('x', x0+50).attr('y', y0+66).attr('fill', '#6b7280').attr('font-size', 12)
-  // Two mini-edges
-  const eY = y0+90
-  const edges = containerSel.append('g').attr('transform', `translate(${x0}, ${eY})`)
-  const line = d3.line<{x:number;y:number}>()
-  // in-sync
-  edges.append('path').attr('d', line([{x:0,y:0},{x:60,y:0}] )||'')
-    .attr('stroke', '#2563eb').attr('fill','none').attr('stroke-width', 3).attr('stroke-dasharray','6 6').attr('stroke-dashoffset','-6')
-  containerSel.append('text').text('In-sync (push)').attr('x', x0+70).attr('y', eY+4).attr('fill', '#6b7280').attr('font-size', 12)
-  // opposed
-  edges.append('path').attr('d', line([{x:0,y:20},{x:60,y:20}] )||'')
-    .attr('stroke', '#2563eb').attr('fill','none').attr('stroke-width', 3).attr('stroke-dasharray','6 6').attr('stroke-dashoffset','6')
-  containerSel.append('text').text('Opposed (ping-pong)').attr('x', x0+70).attr('y', eY+24).attr('fill', '#6b7280').attr('font-size', 12)
+  containerSel.append('rect')
+    .attr('x', x0 - 8)
+    .attr('y', y0 - 6)
+    .attr('width', 360)
+    .attr('height', 198)
+    .attr('rx', 16)
+    .attr('fill', '#f2f7f4')
+    .attr('stroke', '#c9e0d5')
+    .attr('stroke-width', 1.2)
+
+  containerSel.append('text')
+    .text('Legend')
+    .attr('x', x0 + 4)
+    .attr('y', y0 + 16)
+    .attr('fill', '#163a31')
+    .attr('font-weight', 600)
+    .attr('font-size', 14)
+
+  const section = containerSel.append('g').attr('transform', `translate(${x0 + 8}, ${y0 + 40})`)
+
+  const lg = section.append('g')
+  const baselineR = 31, mainR = 20, tickR = 27
+  lg.attr('transform', 'translate(34, 44)')
+  lg.append('circle').attr('r', baselineR).attr('fill', '#bcd8c8').attr('fill-opacity', 0.45)
+  lg.append('circle').attr('r', mainR + 6).attr('fill', 'none').attr('stroke', '#3c8c78').attr('stroke-opacity', 0.28).attr('stroke-width', 9)
+  lg.append('circle').attr('r', mainR).attr('fill', '#56b199')
+  lg.append('circle').attr('r', tickR).attr('fill', 'none').attr('stroke', '#134e4a').attr('stroke-width', 1.5)
+
+  const sampleArcId = 'legend-name-arc'
+  lg.append('path')
+    .attr('id', sampleArcId)
+    .attr('fill', 'none')
+    .attr('stroke', 'none')
+    .attr('d', buildTopArcPath(mainR + 22))
+
+  lg.append('text')
+    .attr('fill', '#184c3d')
+    .attr('font-size', 11)
+    .append('textPath')
+    .attr('href', `#${sampleArcId}`)
+    .attr('startOffset', '50%')
+    .attr('text-anchor', 'middle')
+    .text('Cardiac Rhythm (bpm)')
+
+  lg.append('text')
+    .attr('class', 'legend-node-value')
+    .attr('text-anchor', 'middle')
+    .attr('dy', '0.35em')
+    .attr('fill', '#0b2e27')
+    .attr('font-size', 11)
+    .text('68.2')
+
+  const details = section.append('g').attr('transform', 'translate(112, 4)')
+  const detailLines = [
+    'Radius = Δ vs baseline (level_z)',
+    'Size = raw now; baseline & condition rings',
+    'Halo = activity bands (slope ∆)'
+  ]
+  detailLines.forEach((line, idx) => {
+    details.append('text')
+      .text(line)
+      .attr('x', 0)
+      .attr('y', idx * 16)
+      .attr('fill', '#1f463a')
+      .attr('font-size', 12)
+  })
+
+  const edges = section.append('g').attr('transform', 'translate(0, 116)')
+  const line = d3.line<{ x: number; y: number }>().x(d => d.x).y(d => d.y)
+
+  edges.append('path')
+    .attr('d', line([{ x: 0, y: 0 }, { x: 90, y: 0 }]) || '')
+    .attr('stroke', '#35b79a')
+    .attr('fill', 'none')
+    .attr('stroke-width', 4)
+    .attr('stroke-dasharray', '24 10')
+    .attr('stroke-dashoffset', (-animationTime * 28) % 34)
+
+  edges.append('path')
+    .attr('d', line([{ x: 0, y: 26 }, { x: 90, y: 26 }]) || '')
+    .attr('stroke', '#f07167')
+    .attr('fill', 'none')
+    .attr('stroke-width', 4)
+    .attr('stroke-dasharray', '6 6 2 6')
+    .attr('stroke-dashoffset', Math.sin(animationTime * 3.5) * 14)
+
+  const edgeLabels = section.append('g').attr('transform', 'translate(124, 122)')
+  edgeLabels.append('text')
+    .text('Push (in-sync, driving)')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('fill', '#1f463a')
+    .attr('font-size', 12)
+  edgeLabels.append('text')
+    .text('Pull (opposed, ping-pong)')
+    .attr('x', 0)
+    .attr('y', 26)
+    .attr('fill', '#1f463a')
+    .attr('font-size', 12)
 }
 
 async function main() {
@@ -146,17 +231,25 @@ async function main() {
     app.render()
   })
 
+  const startTime = performance.now()
+  let animationTime = 0
+
+  const legendRoot = svg.append('g').attr('class', 'legend')
+
   const app = {
     render() {
-      // Draw baseline ring
+      layout()
+      animationTime = (performance.now() - startTime) / 1000
+
       gEdges.selectAll('*').remove()
       gNodes.selectAll('*').remove()
       gBg.selectAll('*').remove()
+
       svg.selectAll('.r0').data([0]).join('circle')
         .attr('class', 'r0')
         .attr('cx', cx).attr('cy', cy).attr('r', R0)
         .attr('fill', 'none').attr('stroke', '#2a2f3a')
-      // background rect to clear selection
+
       gBg.append('rect')
         .attr('x', 0).attr('y', 0).attr('width', W).attr('height', H)
         .attr('fill', 'transparent')
@@ -171,17 +264,28 @@ async function main() {
         const p = polar(cx, cy, r_now, theta)
         const raw_now = inverseFromZ(z_now, meta)
         const sizePx = sizeScales[n.id](raw_now)
-        // baseline disc at z=0 raw mean
         const raw_baseline = inverseFromZ(0, meta)
         const baselinePx = sizeScales[n.id](raw_baseline)
         const band = haloBands[n.id]?.[state.timeIndex] ?? 0
-        // condition mean tick radius from static_raw
         const raw_cond_mean = (api.static_raw[condKey] || {})[n.id]
         const tickR = typeof raw_cond_mean === 'number' ? sizeScales[n.id](raw_cond_mean) : 0
-        return { ...n, i, theta, x: p.x, y: p.y, raw_now, sizePx, baselinePx, z_now, band, tickR }
+        return {
+          ...n,
+          i,
+          theta,
+          x: p.x,
+          y: p.y,
+          raw_now,
+          sizePx,
+          baselinePx,
+          z_now,
+          band,
+          tickR,
+          units: meta.units,
+          precision: meta.precision
+        }
       })
 
-      // Edges (simple: draw if |sync|>=theta and conf>=c_min)
       const edgesSeries = api.conditions[condKey].series.edges
       const edgeEntries = Object.entries(edgesSeries)
       const passed = edgeEntries.filter(([, v]) => {
@@ -189,129 +293,152 @@ async function main() {
         const conf = v.conf[state.timeIndex] ?? 0
         return Math.abs(sync) >= 0.15 && conf >= 0.20
       })
-      console.log(`t=${state.timeIndex}, cond=${condKey}, passed=${passed.length}/${edgeEntries.length}, edgeEntries:`, edgeEntries.length)
-      if (passed.length > 0) {
-        console.log('Sample passed edge:', passed[0][0], 'sync=', passed[0][1].sync[state.timeIndex], 'conf=', passed[0][1].conf[state.timeIndex])
-      }
-      // Top-K by conf*static_conn with distance fade
+
       const scoreWithGeom = passed.map(d => {
         const [a, b] = d[0].split('|')
         const ia = NODE_ORDER.findIndex(n => n.name === a)
         const ib = NODE_ORDER.findIndex(n => n.name === b)
+        if (ia < 0 || ib < 0) return null
         const na = nodesData[ia]
         const nb = nodesData[ib]
         const dx = na.x - nb.x
         const dy = na.y - nb.y
-        const dist = Math.sqrt(dx*dx + dy*dy)
+        const dist = Math.sqrt(dx * dx + dy * dy)
         const stat = api.conditions[condKey].static.edges[d[0]]
         const sc = (stat?.static_conn ?? 0) * (d[1].conf[state.timeIndex] ?? 0)
         return { d, dist, sc }
-      })
+      }).filter((x): x is NonNullable<typeof x> => x !== null)
+
       const K = 12
-      const visibleEdges = scoreWithGeom.sort((a,b)=>b.sc-a.sc).slice(0,K)
-      console.log('visibleEdges after Top-K:', visibleEdges.length)
-      if (visibleEdges.length > 0) {
-        console.log('First visible edge:', visibleEdges[0].d[0], 'dist=', visibleEdges[0].dist, 'sc=', visibleEdges[0].sc)
-      }
-      const line = d3.line<{ x: number; y: number }>().curve(d3.curveLinear)
-      
-      // TEST: draw a static red line to confirm SVG rendering works
-      gEdges.append('line').attr('x1', cx-50).attr('y1', cy).attr('x2', cx+50).attr('y2', cy)
-        .attr('stroke', 'red').attr('stroke-width', 3)
-      const edgesSel = gEdges.selectAll('path.edge')
-        .data(visibleEdges, (e: any) => e.d[0])
+      const visibleEdges = scoreWithGeom.sort((a, b) => b.sc - a.sc).slice(0, K)
+
+      const line = d3.line<{ x: number; y: number }>()
+        .x(d => d.x)
+        .y(d => d.y)
+        .curve(d3.curveLinear)
+
+      const edgesSel = gEdges.selectAll<SVGPathElement, typeof visibleEdges[number]>('path.edge')
+        .data(visibleEdges, e => e.d[0])
         .join('path')
         .attr('class', 'edge')
         .attr('fill', 'none')
-        .attr('stroke', '#3b82f6')
-        .attr('stroke-opacity', (e: any) => {
-          // combine confidence and distance fade
+        .attr('stroke', e => {
+          const sync = e.d[1].sync[state.timeIndex] ?? 0
+          return sync >= 0 ? '#35b79a' : '#f07167'
+        })
+        .attr('stroke-opacity', e => {
           const conf = e.d[1].conf[state.timeIndex] ?? 0
           const base = Math.min(1, Math.max(0.2, conf))
           const maxR = Math.min(W, H) * 0.5
           const fade = 0.3 + 0.7 * (1 - Math.min(1, e.dist / maxR))
           return Math.min(1, base * fade)
         })
-        .attr('stroke-width', (e: any) => {
-          // thickness = static_conn (scaled)
+        .attr('stroke-width', e => {
           const ekey = e.d[0]
           const stat = api.conditions[condKey].static.edges[ekey]
           const sc = stat ? stat.static_conn : 0.2
-          return 1 + 4 * sc
+          return 1.2 + 4.5 * sc
         })
-        .attr('d', (e: any) => {
+        .attr('d', e => {
           const [a, b] = e.d[0].split('|')
           const ia = NODE_ORDER.findIndex(n => n.name === a)
           const ib = NODE_ORDER.findIndex(n => n.name === b)
-          if (ia < 0 || ib < 0) {
-            console.warn('Edge node not found:', a, b, 'ia=', ia, 'ib=', ib)
-            return ''
-          }
+          if (ia < 0 || ib < 0) return ''
           const na = nodesData[ia]
           const nb = nodesData[ib]
-          const pathD = line([{ x: na.x, y: na.y }, { x: nb.x, y: nb.y }]) || ''
-          if (!pathD && visibleEdges.indexOf(e) === 0) {
-            console.log('First edge path:', a, '->', b, 'na:', na.x, na.y, 'nb:', nb.x, nb.y, 'd:', pathD)
-          }
-          return pathD
+          return line([{ x: na.x, y: na.y }, { x: nb.x, y: nb.y }]) || ''
         })
-
-      // simple flow indication via dash offset (push for sync>0, ping-pong for sync<0)
-      edgesSel
-        .attr('stroke-dasharray', '6 6')
-        .attr('stroke-dashoffset', (e: any) => {
+        .attr('stroke-dasharray', e => {
           const sync = e.d[1].sync[state.timeIndex] ?? 0
-          const dir = sync >= 0 ? 1 : (state.timeIndex % 2 === 0 ? 1 : -1)
-          return String((-state.timeIndex * 2) * dir)
+          return sync >= 0 ? '24 10' : '6 6 2 6'
+        })
+        .attr('stroke-dashoffset', e => {
+          const sync = e.d[1].sync[state.timeIndex] ?? 0
+          const offset = sync >= 0
+            ? (-animationTime * 28) + Math.sin(animationTime * 3) * 2
+            : Math.sin(animationTime * 3.5) * 14
+          return String(offset)
         })
 
-      // Nodes
-      const nodeG = gNodes.selectAll('g.node').data(nodesData, d => (d as any).id)
+      const nodeG = gNodes.selectAll<SVGGElement, typeof nodesData[0]>('g.node')
+        .data(nodesData, d => d.id)
         .join(enter => {
-          const g = enter.append('g').attr('class', 'node')
-          g.append('circle').attr('class', 'baseline').attr('fill', '#4b5563').attr('fill-opacity', 0.3)
-          g.append('circle').attr('class', 'main').attr('fill', '#93c5fd')
-          g.append('circle').attr('class', 'tick').attr('fill', 'none').attr('stroke', '#111827').attr('stroke-width', 1.5)
-          g.append('text').attr('class', 'label').attr('text-anchor', 'middle').attr('dy', '0.32em')
-          // a11y
-          g.attr('tabindex', 0)
-          g.on('keydown', (ev: KeyboardEvent, d: any) => {
-            if (ev.key === 'Enter' || ev.key === ' ') {
+          const g = enter.append('g')
+            .attr('class', 'node')
+            .attr('tabindex', 0)
+            .on('keydown', (ev: KeyboardEvent, d) => {
+              if (ev.key === 'Enter' || ev.key === ' ') {
+                state.selectedNode = state.selectedNode === d.id ? undefined : d.id
+                renderDetails(d)
+                app.render()
+              }
+            })
+            .on('click', (_, d) => {
               state.selectedNode = state.selectedNode === d.id ? undefined : d.id
               renderDetails(d)
-              app.render()
-            }
-          })
+            })
+
+          g.append('circle').attr('class', 'baseline').attr('fill', '#4b5563').attr('fill-opacity', 0.28)
+          g.append('circle').attr('class', 'main').attr('fill', '#93c5fd')
+          g.append('circle').attr('class', 'tick').attr('fill', 'none').attr('stroke', '#111827').attr('stroke-width', 1.5)
+          g.append('path').attr('class', 'name-arc').attr('fill', 'none').attr('stroke', 'none')
+
+          const valueText = g.append('text')
+            .attr('class', 'value')
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#0b2e27')
+            .attr('font-weight', 600)
+            .attr('dy', '0.4em')
+          valueText.append('tspan')
+
+          const nameText = g.append('text')
+            .attr('class', 'name')
+            .attr('fill', '#184c3d')
+            .attr('font-size', 12)
+          nameText.append('textPath')
+            .attr('startOffset', '50%')
+            .attr('text-anchor', 'middle')
+
           return g
-        }) as d3.Selection<SVGGElement, any, any, any>
+        })
 
       nodeG.attr('transform', d => `translate(${d.x},${d.y})`)
+
       nodeG.select('circle.baseline').attr('r', d => d.baselinePx)
-      nodeG.select('circle.main').attr('r', d => d.sizePx)
+
+      nodeG.select('circle.main')
+        .attr('r', d => d.sizePx)
         .attr('fill-opacity', d => [0.3, 0.6, 0.8, 1.0][d.band])
+
       nodeG.select('circle.tick')
         .attr('r', d => (state.selectedNode === d.id ? d.tickR : 0))
-      nodeG.select('text.label')
-        .text(d => `${d.raw_now.toFixed(api.calibration.nodes[d.id].precision)}`)
-        .style('display', d => (d.sizePx < 10 ? 'none' : 'block'))
 
-      // selection behavior
-      nodeG.on('click', (_, d) => {
-        state.selectedNode = state.selectedNode === d.id ? undefined : d.id
-        renderDetails(d)
-      })
+      nodeG.select('path.name-arc')
+        .attr('id', d => `name-arc-${d.id}`)
+        .attr('d', d => buildTopArcPath(d.sizePx + 26))
 
-      // Dim non-incident edges when a node is selected
+      nodeG.select('text.value')
+        .style('display', d => (d.sizePx < 18 ? 'none' : 'block'))
+        .text(d => d.raw_now.toFixed(d.precision))
+
+      nodeG.select('text.name textPath')
+        .attr('href', d => `#name-arc-${d.id}`)
+        .text(d => {
+          const unitLabel = d.units?.trim() ? d.units : 'a.u.'
+          return `${d.name} (${unitLabel})`
+        })
+
       if (state.selectedNode) {
         const selName = NODE_ORDER.find(n => n.id === state.selectedNode)!.name
-        edgesSel.attr('stroke-opacity', (e: any) => {
+        edgesSel.attr('stroke-opacity', e => {
           const [a, b] = e.d[0].split('|')
           const base = Math.min(1, (e.d[1].conf[state.timeIndex] ?? 0))
           return (a === selName || b === selName) ? base : base * 0.2
         })
       }
 
-      renderLegend(svg.append('g').attr('transform', `translate(12, ${H - 110})`))
+      legendRoot.attr('transform', `translate(12, ${H - 220})`)
+      renderLegend(legendRoot, animationTime)
     }
   }
 
