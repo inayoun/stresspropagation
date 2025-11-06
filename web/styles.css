@@ -9,7 +9,9 @@ button{background:#fff;border:1px solid #d1d5db;color:var(--fg);padding:6px 10px
 button:hover{border-color:#9ca3af}
 .main{display:flex;gap:0;padding:0;height:calc(100vh - 56px)}
 .canvas{flex:1;height:100%;background:#fbf7ec}
-.legend{position:absolute;left:12px;bottom:12px;color:var(--muted);font-size:12px;background:rgba(255,255,255,0.7);padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px}
+.sidebar{width:280px;background:#f2f7f4;border-left:1px solid #c9e0d5;padding:16px;overflow-y:auto;color:var(--fg);font-size:14px;line-height:1.6}
+.sidebar div{margin-bottom:8px}
+.sidebar strong{color:#163a31;font-weight:600}
 .controls{display:flex;align-items:center;gap:8px}
 .scrubber{width:240px}
 .node-label{font-size:10px;fill:#111827}

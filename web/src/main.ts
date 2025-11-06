@@ -25,6 +25,7 @@ const container = d3.select<HTMLDivElement, unknown>('#canvas')
 const svg = container.append('svg')
 // groups
 const gEdges = svg.append('g').attr('class', 'edges')
+const gCondMean = svg.append('g').attr('class', 'cond-mean-markers')
 const gNodes = svg.append('g').attr('class', 'nodes')
 // background capture for clear
 const gBg = svg.insert('g', ':first-child').attr('class', 'bg')
@@ -80,7 +81,7 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
     .attr('x', x0 - 8)
     .attr('y', y0 - 6)
     .attr('width', 360)
-    .attr('height', 198)
+    .attr('height', 214)
     .attr('rx', 16)
     .attr('fill', '#f2f7f4')
     .attr('stroke', '#c9e0d5')
@@ -103,6 +104,19 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
   lg.append('circle').attr('r', mainR + 6).attr('fill', 'none').attr('stroke', '#3c8c78').attr('stroke-opacity', 0.28).attr('stroke-width', 9)
   lg.append('circle').attr('r', mainR).attr('fill', '#56b199')
   lg.append('circle').attr('r', tickR).attr('fill', 'none').attr('stroke', '#134e4a').attr('stroke-width', 1.5)
+
+  const markerSize = 7
+  const legendTriangle = [
+    [0 - markerSize, -baselineR - markerSize],
+    [0 + markerSize, -baselineR - markerSize],
+    [0, -baselineR + markerSize]
+  ]
+  lg.append('path')
+    .attr('d', `M ${legendTriangle[0][0]} ${legendTriangle[0][1]} L ${legendTriangle[1][0]} ${legendTriangle[1][1]} L ${legendTriangle[2][0]} ${legendTriangle[2][1]} Z`)
+    .attr('fill', '#c52b36')
+    .attr('stroke', '#7f1d1d')
+    .attr('stroke-width', 1.2)
+    .attr('fill-opacity', 0.9)
 
   const sampleArcId = 'legend-name-arc'
   lg.append('path')
@@ -131,7 +145,8 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
   const details = section.append('g').attr('transform', 'translate(112, 4)')
   const detailLines = [
     'Radius = Δ vs baseline (level_z)',
-    'Size = raw now; baseline & condition rings',
+    'Size = raw now; baseline ring shown',
+    'Red triangle = condition mean (static)',
     'Halo = activity bands (slope ∆)'
   ]
   detailLines.forEach((line, idx) => {
@@ -242,6 +257,7 @@ async function main() {
       animationTime = (performance.now() - startTime) / 1000
 
       gEdges.selectAll('*').remove()
+      gCondMean.selectAll('*').remove()
       gNodes.selectAll('*').remove()
       gBg.selectAll('*').remove()
 
@@ -269,6 +285,9 @@ async function main() {
         const band = haloBands[n.id]?.[state.timeIndex] ?? 0
         const raw_cond_mean = (api.static_raw[condKey] || {})[n.id]
         const tickR = typeof raw_cond_mean === 'number' ? sizeScales[n.id](raw_cond_mean) : 0
+        const condMeanPx = (state.condition !== 1 && typeof raw_cond_mean === 'number') 
+          ? sizeScales[n.id](raw_cond_mean) 
+          : 0
         return {
           ...n,
           i,
@@ -281,6 +300,7 @@ async function main() {
           z_now,
           band,
           tickR,
+          condMeanPx,
           units: meta.units,
           precision: meta.precision
         }
@@ -359,6 +379,41 @@ async function main() {
             : Math.sin(animationTime * 3.5) * 14
           return String(offset)
         })
+
+      // Render static condition mean markers (only for non-baseline conditions)
+      if (state.condition !== 1) {
+        const condMeanMarkers = nodesData
+          .filter(d => d.condMeanPx > 0)
+          .map(d => {
+            const meta = api.calibration.nodes[d.id]
+            const raw_cond_mean = (api.static_raw[condKey] || {})[d.id]
+            if (typeof raw_cond_mean !== 'number') return null
+
+            // Calculate z-score for condition mean
+            const z_cond_mean = (raw_cond_mean - meta.mu) / meta.sigma
+            const r_cond_mean = R0 + zToDr(z_cond_mean, RDelta)
+            const p = polar(cx, cy, r_cond_mean, d.theta)
+
+            return { ...d, staticX: p.x, staticY: p.y }
+          })
+          .filter((d): d is NonNullable<typeof d> => d !== null)
+
+        const markerSize = 7
+        gCondMean.selectAll<SVGPathElement, typeof condMeanMarkers[0]>('path.cond-mean-marker')
+          .data(condMeanMarkers, d => d.id)
+          .join(enter => enter.append('path').attr('class', 'cond-mean-marker'))
+          .attr('d', d => {
+            const { staticX: x, staticY: y } = d
+            const topLeft = `${x - markerSize} ${y - markerSize}`
+            const topRight = `${x + markerSize} ${y - markerSize}`
+            const bottom = `${x} ${y + markerSize}`
+            return `M ${topLeft} L ${topRight} L ${bottom} Z`
+          })
+          .attr('fill', '#c52b36')
+          .attr('stroke', '#7f1d1d')
+          .attr('stroke-width', 1.2)
+          .attr('fill-opacity', 0.9)
+      }
 
       const nodeG = gNodes.selectAll<SVGGElement, typeof nodesData[0]>('g.node')
         .data(nodesData, d => d.id)
