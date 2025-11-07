@@ -3,22 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stress Propagation Visualization</title>
+    <title>Nervous System Dashboard</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles-extra.css" />
+    <link rel="stylesheet" href="/styles-landing.css" />
   </head>
   <body>
     <div class="header">
-      <h1>Stress Propagation</h1>
-      <div class="toolbar controls">
-        <label for="conditionSelect" style="color:#e5e7eb;font-size:12px">Condition</label>
-        <select id="conditionSelect">
-          <option value="1">Baseline</option>
-          <option value="2">Stress</option>
-          <option value="3">Amusement</option>
-          <option value="4">Meditation</option>
-        </select>
-        <button id="playPause">Play</button>
-        <input id="scrubber" class="scrubber" type="range" min="0" max="100" value="0" />
+      <h1>Nervous System Dashboard</h1>
+      <div class="toolbar">
+        <div class="controls">
+          <label for="conditionSelect">Condition</label>
+          <div class="select-wrap">
+            <select id="conditionSelect" aria-label="Select condition">
+              <option value="1">Baseline</option>
+              <option value="2">Stress</option>
+              <option value="3">Amusement</option>
+              <option value="4">Meditation</option>
+            </select>
+          </div>
+          <button id="playPause" aria-label="Play or pause" title="Play/Pause"><span class="btn-text">▶ Play</span></button>
+          <input id="scrubber" class="scrubber" type="range" min="0" max="100" value="0" aria-label="Timeline scrubber" />
+        </div>
       </div>
     </div>
     <div class="main">
@@ -26,6 +32,22 @@
       <div class="sidebar" id="details">Select a node</div>
     </div>
     <div id="tooltip" class="tooltip" style="display:none"></div>
+    
+    <!-- Landing page overlay -->
+    <div id="landingOverlay" class="landing-overlay">
+      <div class="landing-backdrop"></div>
+      <div id="landingCard" class="landing-card">
+        <button id="landingClose" class="landing-close" aria-label="Close tutorial">✕</button>
+        <div class="landing-nav">
+          <button id="landingPrev" class="landing-arrow" aria-label="Previous">← Prev</button>
+          <span id="landingStage" class="landing-stage">1 / 6</span>
+          <button id="landingNext" class="landing-arrow" aria-label="Next">Next →</button>
+        </div>
+        <h2 id="landingTitle" class="landing-title">Nervous System Dashboard</h2>
+        <p id="landingText" class="landing-text"></p>
+      </div>
+    </div>
+    
     <script type="module" src="/src/main.ts"></script>
   </body>
   </html>
