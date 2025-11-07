@@ -21,7 +21,7 @@ NODE_ORDER = [
 ]
 NODE_IDS = [k for _, k in NODE_ORDER]
 
-HOP_SECONDS = 30  # from WP1: 60s win, 30s hop
+HOP_SECONDS = 30  # 60s win, 30s hop
 MAX_MB = 3.0
 
 
@@ -96,10 +96,19 @@ def build_series(gnodes: pd.DataFrame, gedges: pd.DataFrame) -> Dict[int, Dict]:
 
 
 def compute_static_raw_means() -> Dict[int, Dict[str, float]]:
-    # Average across subjects the per-condition raw means per node using features_{id}.parquet
+    """
+    Average across subjects the per-condition raw means per node using features_{id}.parquet
+    
+    Calculation:
+    1. For each subject and condition, compute mean raw value for each node
+    2. Average those per-subject means across all subjects for each condition
+    
+    This gives the condition-level mean in raw units (not z-scored).
+    """
     res: Dict[int, Dict[str, float]] = {1:{},2:{},3:{},4:{}}
     subj_files = list(INTERIM.glob('features_*.parquet'))
     per_cond_node: Dict[int, Dict[str, List[float]]] = {1:{},2:{},3:{},4:{}}
+    
     for fp in subj_files:
         df = pd.read_parquet(fp)
         for cond in [1,2,3,4]:
@@ -109,11 +118,24 @@ def compute_static_raw_means() -> Dict[int, Dict[str, float]]:
             for _, k in NODE_ORDER:
                 m = float(cdf[k].astype(float).mean())
                 per_cond_node[cond].setdefault(k, []).append(m)
+    
+    # Compute final means and print validation
+    print('\n' + '='*80)
+    print('CONDITION MEANS VALIDATION (raw units)')
+    print('='*80)
     for cond in [1,2,3,4]:
+        cond_name = {1: 'Baseline', 2: 'Stress', 3: 'Amusement', 4: 'Meditation'}[cond]
+        print(f'\nCondition {cond} ({cond_name}):')
         for _, k in NODE_ORDER:
             vals = per_cond_node[cond].get(k, [])
             if len(vals) > 0:
-                res[cond][k] = float(np.nanmean(vals))
+                mean_val = float(np.nanmean(vals))
+                std_val = float(np.nanstd(vals))
+                res[cond][k] = mean_val
+                node_name = [n for n, nid in NODE_ORDER if nid == k][0]
+                print(f'  {node_name:<20} mean={mean_val:>8.4f} ± {std_val:>6.4f} (n={len(vals)} subjects)')
+    print('='*80 + '\n')
+    
     return res
 
 
