@@ -1,22 +1,9 @@
-import { defineConfig } from 'vite';
-import dts from 'vite-plugin-dts';
+import { defineConfig } from 'vite'
 
-export default defineConfig({
-  base: '/StressPropagation/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/StressPropagation/' : '/',
   build: {
-    lib: {
-      entry: 'src/main.ts',
-      name: 'StressPropagation',
-      fileName: (format) => `stress-propagation.${format}.js`,
-    },
-    rollupOptions: {
-      external: ['d3'],
-      output: {
-        globals: {
-          d3: 'd3',
-        },
-      },
-    },
+    outDir: 'dist',
+    emptyOutDir: true,
   },
-  plugins: [dts()],
-});
+}))
