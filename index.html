@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nervous System Dashboard</title>
+    <script type="module" crossorigin src="/StressPropagation/assets/index-BvyHB5wC.js"></script>
+    <link rel="stylesheet" crossorigin href="/StressPropagation/assets/index-C6m06OoS.css">
+  </head>
+  <body>
+    <div class="header">
+      <h1>Nervous System Dashboard</h1>
+      <div class="toolbar">
+        <div class="controls">
+          <label for="conditionSelect">Condition</label>
+          <div class="select-wrap">
+            <select id="conditionSelect" aria-label="Select condition">
+              <option value="1">Baseline</option>
+              <option value="2">Stress</option>
+              <option value="3">Amusement</option>
+              <option value="4">Meditation</option>
+            </select>
+          </div>
+          <button id="playPause" aria-label="Play or pause" title="Play/Pause"><span class="btn-text">▶ Play</span></button>
+          <input id="scrubber" class="scrubber" type="range" min="0" max="100" value="0" aria-label="Timeline scrubber" />
+        </div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="canvas" id="canvas"></div>
+      <div class="sidebar" id="details">Select a node</div>
+    </div>
+    <div id="tooltip" class="tooltip" style="display:none"></div>
+    
+    <!-- Landing page overlay -->
+    <div id="landingOverlay" class="landing-overlay">
+      <div class="landing-backdrop"></div>
+      <div id="landingCard" class="landing-card">
+        <button id="landingClose" class="landing-close" aria-label="Close tutorial">✕</button>
+        <div class="landing-nav">
+          <button id="landingPrev" class="landing-arrow" aria-label="Previous">← Prev</button>
+          <span id="landingStage" class="landing-stage">1 / 6</span>
+          <button id="landingNext" class="landing-arrow" aria-label="Next">Next →</button>
+        </div>
+        <h2 id="landingTitle" class="landing-title">Nervous System Dashboard</h2>
+        <p id="landingText" class="landing-text"></p>
+      </div>
+    </div>
+    
+  </body>
+  </html>
