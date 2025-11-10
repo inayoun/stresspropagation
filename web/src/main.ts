@@ -124,16 +124,6 @@ function buildSizeScales(cal: GroupAPI['calibration']) {
   return scales
 }
 
-function buildTopArcPath(r: number): string {
-  const startAngle = Math.PI
-  const endAngle = 0
-  const start = polar(0, 0, r, startAngle)
-  const end = polar(0, 0, r, endAngle)
-  const largeArcFlag = 0
-  const sweepFlag = 0
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}`
-}
-
 function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>, animationTime: number) {
   containerSel.selectAll('*').remove()
   const x0 = 10, y0 = 10
