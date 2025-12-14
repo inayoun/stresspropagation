@@ -21,7 +21,7 @@ NODE_ORDER = [
 ]
 NODE_IDS = [k for _, k in NODE_ORDER]
 
-HOP_SECONDS = 30  # 60s win, 30s hop
+HOP_SECONDS = 30
 MAX_MB = 3.0
 
 
@@ -43,13 +43,13 @@ def compute_static_nodes(gnodes: pd.DataFrame) -> Dict[int, Dict[str, Dict[str, 
         cd = gnodes[gnodes['condition']==cond].sort_values('t').reset_index(drop=True)
         if cd.empty:
             continue
-        # approximate accel_z series from slope_z diff
+
         accel_cols = {}
         for _, k in NODE_ORDER:
             slope = cd[f'{k}_slope_z'].astype(float)
             accel = slope.diff().fillna(0.0)
             accel_cols[f'{k}_accel_z'] = accel
-        # build static
+
         sn: Dict[str, Dict[str, float]] = {}
         for _, k in NODE_ORDER:
             sn[k] = {
@@ -71,7 +71,7 @@ def build_series(gnodes: pd.DataFrame, gedges: pd.DataFrame) -> Dict[int, Dict]:
             continue
         t_max = int(nd['t'].max()) if 't' in nd else 0
         t = list((nd['t'].astype(int) * HOP_SECONDS).values)
-        # nodes series
+
         nodes_series: Dict[str, Dict[str, List[float]]] = {}
         for _, k in NODE_ORDER:
             nodes_series[k] = {
@@ -79,11 +79,11 @@ def build_series(gnodes: pd.DataFrame, gedges: pd.DataFrame) -> Dict[int, Dict]:
                 'slope': list(nd[f'{k}_slope_z'].astype(float).values),
                 'var': list(nd[f'{k}_var_raw'].astype(float).values),
             }
-        # edges series keyed by edge_key
+
         edges_series: Dict[str, Dict[str, List[float]]] = {}
         for ekey in sorted(ed['edge_key'].unique()):
             es = ed[ed['edge_key']==ekey].reset_index(drop=True)
-            # ensure same length as t (truncate to min)
+
             L = min(len(t), len(es))
             edges_series[ekey] = {
                 'sync': list(es['sync'].astype(float).values[:L]),
@@ -119,7 +119,7 @@ def compute_static_raw_means() -> Dict[int, Dict[str, float]]:
                 m = float(cdf[k].astype(float).mean())
                 per_cond_node[cond].setdefault(k, []).append(m)
     
-    # Compute final means and print validation
+
     print('\n' + '='*80)
     print('CONDITION MEANS VALIDATION (raw units)')
     print('='*80)
@@ -161,7 +161,7 @@ def maybe_chunk_and_write(payload: Dict):
             f.write(s)
         print(f'Wrote {main_path} ({size_mb:.2f} MB)')
         return
-    # Too big: write series per condition as chunks
+
     base = ARTIFACTS
     payload_small = dict(payload)
     payload_small['conditions'] = {}
@@ -202,7 +202,7 @@ def main():
                 'nodes': static_nodes[cond],
                 'edges': {ek: {'static_conn': float(group['edges'][(group['edges']['condition']==cond) & (group['edges']['edge_key']==ek)]['static_conn'].mean()),
                                'sync_rate': float(group['edges'][(group['edges']['condition']==cond) & (group['edges']['edge_key']==ek)]['sync_rate'].mean()),
-                               'significant': False}  # placeholder, significance in later WP
+                               'significant': False}
                           for ek in group['edges'][group['edges']['condition']==cond]['edge_key'].unique()}
             },
             'series': {

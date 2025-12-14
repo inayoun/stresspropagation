@@ -49,7 +49,7 @@ def z_to_dr(z: float, r_delta: float, z_max: float = 2.5) -> float:
 def validate_wp7_label_and_inverse():
     api = json.loads((ART / 'group.json').read_text('utf-8'))
     ok = True
-    # sample 200 triplets across available series
+
     cnt = 0
     for cond, cobj in api['conditions'].items():
         series = cobj['series']
@@ -63,10 +63,10 @@ def validate_wp7_label_and_inverse():
                 meta = api['calibration']['nodes'][node_id]
                 xp = z * meta['sigma'] + meta['mu']
                 raw = float(inverse(xp, meta))
-                # label precision
+
                 prec = PRECISION[node_id]
                 label = f"{raw:.{prec}f}"
-                # Check rounding tolerance in raw domain (half-ULP at this precision)
+
                 raw_back = float(label)
                 tol = 0.5 * (10 ** (-prec))
                 if abs(raw_back - raw) > tol:
@@ -82,13 +82,13 @@ def validate_wp7_label_and_inverse():
 
 
 def validate_wp7_z0_r0_mapping():
-    # zToDr(0) -> 0
+
     for rd in [50, 100, 200]:
         assert z_to_dr(0.0, rd) == 0.0
 
 
 def validate_wp8_halo_logic():
-    # EMA with alpha=0.3 on |Δ slope| thresholds 0.1/0.3/0.6
+
     def bands(seq):
         ema = 0.0
         out = [0]
@@ -97,9 +97,9 @@ def validate_wp8_halo_logic():
             ema = 0.3 * dv + 0.7 * ema
             out.append(3 if ema > 0.6 else 2 if ema > 0.3 else 1 if ema > 0.1 else 0)
         return out
-    # constant series -> all zeros
+
     assert all(b == 0 for b in bands([0]*50)), 'Constant series should yield no halo'
-    # small ±1% oscillations around 0.0 produce low bands and minimal flicker
+
     seq = [0.0 + (0.01 if i % 10 == 0 else 0.0) for i in range(200)]
     b = bands(seq)
     flips = sum(1 for i in range(1, len(b)) if b[i] != b[i-1])

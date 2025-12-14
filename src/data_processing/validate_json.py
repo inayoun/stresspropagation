@@ -21,10 +21,10 @@ NODE_ORDER = [
 NODE_IDS = [k for _, k in NODE_ORDER]
 
 PRECISION_TOLS = {
-    'node_heart_rate': 0.05,  # bpm
-    'node_skin_temperature': 0.01,  # C
-    'node_sweat_level': 1e-3,  # rel tol
-    'node_muscle_tension': 1e-3,  # rel tol
+    'node_heart_rate': 0.05,
+    'node_skin_temperature': 0.01,
+    'node_sweat_level': 1e-3,
+    'node_muscle_tension': 1e-3,
 }
 
 
@@ -54,7 +54,7 @@ def check_lengths(api: Dict):
 
 
 def sample_triplets(api: Dict, n=200) -> List[Tuple[int, str, int]]:
-    # Collect available triplets
+
     candidates = []
     for cond, cobj in api['conditions'].items():
         Lt = len(cobj['series']['t'])
@@ -76,7 +76,7 @@ def rebuild_raw_hat(api: Dict, cond: int, node_id: str, t: int) -> float:
 
 
 def group_raw_from_parquet_via_z(cond: int, node_id: str, t: int, meta: Dict) -> float:
-    # Average z across subjects, then inverse using calibration
+
     zs = []
     for fp in INT.glob('features_*.parquet'):
         df = pd.read_parquet(fp).sort_values('window_id').reset_index(drop=True)
@@ -106,7 +106,7 @@ def validate_reconstruction(api: Dict):
             err = abs(raw_hat - raw_true)
             assert err <= PRECISION_TOLS['node_skin_temperature'], f"Temp err {err} > tol"
         elif node_id in ('node_sweat_level','node_muscle_tension'):
-            # Compare raw relative error per WP5 tolerances (UI/precision thresholds apply)
+
             rel_err = abs(raw_hat - raw_true) / max(1.0, abs(raw_true))
             assert rel_err <= PRECISION_TOLS[node_id], f"{node_id} rel_err={rel_err}"
         else:

@@ -1,14 +1,3 @@
-# API Schema: artifacts/api/group.json
-
-This document defines the schema and constraints for the exported API used by the frontend.
-The file artifacts/api/group.json must conform to this schema.
-
-- Version: 2.0
-- Node order is fixed and used for angular positions.
-- All series arrays at a given condition must share a consistent time base length.
-
-## Top-level structure
-
 ```json
 {
   "version": "2.0",
@@ -49,7 +38,6 @@ The file artifacts/api/group.json must conform to this schema.
 }
 ```
 
-## JSON Schema (Draft 2020-12)
 
 ```json
 {
@@ -202,12 +190,3 @@ The file artifacts/api/group.json must conform to this schema.
   }
 }
 ```
-
-## Additional constraints
-- Edge keys must be of the form "A|B" where A and B are values of nodes[].system.
-- For a given condition, lengths must satisfy: len(nodes[*].level) == len(nodes[*].slope) == len(nodes[*].var) == len(edges[*].sync) == len(edges[*].conf) == len(t).
-- Values must be finite; NaN/Infinity are not allowed.
-
-## Notes
-- If series is chunked due to size constraints, group.json includes a series_chunk field per condition pointing to a companion file; the schema above assumes inlined series.
-- Calibration precision dictates rounding for UI labels.

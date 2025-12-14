@@ -23,18 +23,18 @@ const NODE_ORDER: { name: string; id: string }[] = [
 
 const container = d3.select<HTMLDivElement, unknown>('#canvas')
 const svg = container.append('svg')
-// groups
+
 const gEdges = svg.append('g').attr('class', 'edges')
 const gCondMean = svg.append('g').attr('class', 'cond-mean-markers')
 const gNodes = svg.append('g').attr('class', 'nodes')
-// background capture for clear
+
 const gBg = svg.insert('g', ':first-child').attr('class', 'bg')
 
 const playBtn = document.getElementById('playPause') as HTMLButtonElement
 const scrubber = document.getElementById('scrubber') as HTMLInputElement
 const conditionSelect = document.getElementById('conditionSelect') as HTMLSelectElement
 
-// Landing page elements
+
 const landingOverlay = document.getElementById('landingOverlay') as HTMLDivElement
 const landingCard = document.getElementById('landingCard') as HTMLDivElement
 const landingTitle = document.getElementById('landingTitle') as HTMLHeadingElement
@@ -117,7 +117,7 @@ function buildSizeScales(cal: GroupAPI['calibration']) {
   const scales: Record<string, (raw: number) => number> = {}
   for (const { id } of NODE_ORDER) {
     const m = cal.nodes[id]
-    // larger pixel range for visibility in light mode
+    
     const s = buildSizeScale(m.mu, m.sigma, 24, 68)
     scales[id] = s
   }
@@ -128,14 +128,14 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
   containerSel.selectAll('*').remove()
   const x0 = 10, y0 = 10
 
-  // Simple SVG text wrap helper
+  
   function wrapText(textSel: d3.Selection<SVGTextElement, unknown, any, any>, width: number) {
     textSel.each(function() {
       const text = d3.select(this)
       const words = (text.text() || '').split(/\s+/).filter(Boolean)
       let line: string[] = []
       let lineNumber = 0
-      const lineHeight = 14 // px
+      const lineHeight = 14 
       const x = Number(text.attr('x') || 0)
       const y = Number(text.attr('y') || 0)
       const dy = 0
@@ -143,7 +143,7 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
       for (const word of words) {
         line.push(word)
         tspan.text(line.join(' '))
-        // Use getComputedTextLength for accurate width
+        
         if ((tspan.node()?.getComputedTextLength() || 0) > width) {
           line.pop()
           tspan.text(line.join(' '))
@@ -175,7 +175,7 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
     .attr('font-weight', 600)
     .attr('font-size', 14)
 
-  // Info icon to reopen tutorial
+  
   const infoGroup = containerSel.append('g')
     .attr('transform', `translate(${x0 + 280}, ${y0 + 4})`)
     .style('cursor', 'pointer')
@@ -206,10 +206,10 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
   const baselineR = 31, currentR = 20
   lg.attr('transform', 'translate(34, 44)')
   
-  // Baseline circle
+  
   lg.append('circle').attr('r', baselineR).attr('fill', 'none').attr('stroke', '#c9e0d5').attr('stroke-width', 1)
   
-  // Sector boundaries
+  
   lg.append('line')
     .attr('x1', 0).attr('y1', 0)
     .attr('x2', baselineR * Math.cos(-sectorAngleLegend/2))
@@ -221,7 +221,7 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
     .attr('y2', baselineR * Math.sin(sectorAngleLegend/2))
     .attr('stroke', '#c9e0d5').attr('stroke-width', 1).attr('stroke-opacity', 0.5)
   
-  // Condition mean waveform example (line only)
+  
   const condMeanR = 24
   const condMeanWavePoints: {x: number, y: number}[] = []
   const condBaselinePoints: {x: number, y: number}[] = []
@@ -246,7 +246,7 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
     .attr('stroke-width', 1.5)
     .attr('stroke-opacity', 0.9)
   
-  // Current value waveform example
+  
   const wavePoints: {x: number, y: number}[] = []
   const baselinePoints: {x: number, y: number}[] = []
   for (let i = 0; i <= numPts; i++) {
@@ -288,7 +288,7 @@ function renderLegend(containerSel: d3.Selection<SVGGElement, unknown, any, any>
     wrapText(t as any, 168)
   })
 
-  // Condition mean line positioned directly above edge lines
+  
   const condLegend = section.append('g').attr('transform', 'translate(0, 96)')
   condLegend.append('path')
     .attr('d', 'M 0 0 L 90 0')
@@ -363,7 +363,7 @@ async function main() {
   let tSeries = series.t
   const sizeScales = buildSizeScales(api.calibration)
 
-  // Precompute halo bands from slope changes
+  
   let haloBands: Record<string, number[]> = {}
   function rebuildHaloBands() {
     haloBands = {}
@@ -374,7 +374,7 @@ async function main() {
       for (let t = 1; t < slope.length; t++) {
         const dv = Math.abs((slope[t] ?? 0) - (slope[t - 1] ?? 0))
         ema = 0.3 * dv + 0.7 * ema
-        // thresholds heuristic
+        
         bands[t] = ema > 0.6 ? 3 : ema > 0.3 ? 2 : ema > 0.1 ? 1 : 0
       }
       haloBands[id] = bands
@@ -395,7 +395,7 @@ async function main() {
     app.render()
   })
 
-  // Prevent sidebar clicks from interfering with playback
+  
   const detailsPanel = document.getElementById('details')!
   detailsPanel.addEventListener('click', (e) => {
     e.stopPropagation()
@@ -464,7 +464,7 @@ async function main() {
         }
       })
 
-      // Calculate aggregated edge metrics across entire timeline for this condition
+      
       const edgesSeries = api.conditions[condKey].series.edges
       const edgeEntries = Object.entries(edgesSeries)
       
@@ -474,7 +474,7 @@ async function main() {
         const ib = NODE_ORDER.findIndex(n => n.name === b)
         if (ia < 0 || ib < 0) return null
         
-        // Calculate average sync and conf across entire timeline
+        
         const syncValues = series.sync.filter((v): v is number => v != null)
         const confValues = series.conf.filter((v): v is number => v != null)
         
@@ -499,7 +499,7 @@ async function main() {
         }
       }).filter((x): x is NonNullable<typeof x> => x !== null)
       
-      // Filter by thresholds and select top K
+      
       const passed = aggregatedEdges.filter(e => 
         Math.abs(e.avg_sync) >= 0.15 && e.avg_conf >= 0.20
       )
@@ -508,7 +508,7 @@ async function main() {
       const visibleEdges = passed.sort((a, b) => b.static_conn - a.static_conn).slice(0, K)
       const staticOpacity = (conn: number) => Math.min(0.9, Math.max(0.2, conn * 1.4))
       
-      // Debug: Log edge metrics for breathing rate/depth
+      
       const breathingEdge = aggregatedEdges.find(e => 
         (e.nodeA === 'Breathing Rate' && e.nodeB === 'Breathing Depth') ||
         (e.nodeA === 'Breathing Depth' && e.nodeB === 'Breathing Rate')
@@ -583,7 +583,7 @@ async function main() {
         .attr('stroke-opacity', e => staticOpacity(e.static_conn))
         .attr('stroke-width', 3)
         .attr('d', e => {
-          // Connect at baseline radius (R0) at each node's angular position
+          
           const thetaA = nodesData[e.indexA].theta
           const thetaB = nodesData[e.indexB].theta
           const points = computeBundlePoints(thetaA, thetaB)
@@ -591,7 +591,7 @@ async function main() {
         })
         .attr('stroke-dasharray', e => e.avg_sync >= 0 ? '24 10' : '6 6 2 6')
         .attr('stroke-dashoffset', e => {
-          // Only animate if connected to selected node (by index to avoid name mismatches)
+          
           if (!state.selectedNode) return '0'
           const selIdx = nodesData.find(nd => nd.id === state.selectedNode)?.i
           if (selIdx == null) return '0'
@@ -603,10 +603,10 @@ async function main() {
           return String(offset)
         })
 
-      // Calculate sector angle for all sector-based rendering
+      
       const sectorAngle = (Math.PI * 2) / nodesData.length
 
-      // Render static condition mean markers (only for non-baseline conditions)
+      
       if (state.condition !== 1) {
         const condMeanMarkers = nodesData
           .filter(d => d.condMeanPx > 0)
@@ -615,13 +615,13 @@ async function main() {
             const raw_cond_mean = (api.static_raw[condKey] || {})[d.id]
             if (typeof raw_cond_mean !== 'number') return null
 
-            // Apply transform before calculating z-score (same as data preprocessing)
+            
             let transformed_cond_mean = raw_cond_mean
             if (meta.transform === 'log1p') {
               transformed_cond_mean = Math.log1p(Math.max(0, raw_cond_mean))
             }
             
-            // Calculate z-score from transformed value
+            
             const z_cond_mean = (transformed_cond_mean - meta.mu) / meta.sigma
             const r_cond_mean = R0 + zToDr(z_cond_mean, RDelta)
             const p = polar(cx, cy, r_cond_mean, d.theta)
@@ -630,7 +630,7 @@ async function main() {
           })
           .filter((d): d is NonNullable<typeof d> => d !== null)
 
-        // Draw filled waveform bands for condition mean
+        
         const condMeanWaveforms = condMeanMarkers.map(d => {
           const meta = api.calibration.nodes[d.id]
           const raw_cond_mean = (api.static_raw[condKey] || {})[d.id]
@@ -647,7 +647,7 @@ async function main() {
           const angleStart = d.theta - sectorAngle / 2
           const numPoints = 20
           
-          // Condition mean waveform (sine curve)
+          
           const condMeanWave: {x: number, y: number}[] = []
           for (let i = 0; i <= numPoints; i++) {
             const t = i / numPoints
@@ -657,7 +657,7 @@ async function main() {
             condMeanWave.push(polar(cx, cy, r, angle))
           }
           
-          // Baseline arc (reverse direction for closed path)
+          
           const baselineArc: {x: number, y: number}[] = []
           for (let i = numPoints; i >= 0; i--) {
             const t = i / numPoints
@@ -679,8 +679,8 @@ async function main() {
           .attr('stroke-opacity', 0.9)
       }
 
-      // Draw sector boundaries and labels at baseline
-      // Sector boundary lines
+      
+      
       gNodes.selectAll<SVGLineElement, typeof nodesData[0]>('line.sector-boundary')
         .data(nodesData, d => d.id)
         .join('line')
@@ -699,7 +699,7 @@ async function main() {
         .attr('stroke-width', 1)
         .attr('stroke-opacity', 0.3)
 
-      // Sector labels at baseline radius - positioned further out for visibility
+      
       const labelG = gNodes.selectAll<SVGGElement, typeof nodesData[0]>('g.sector-label')
         .data(nodesData, d => d.id)
         .join('g')
@@ -734,14 +734,14 @@ async function main() {
         .text(d => d.name)
         .raise()
 
-      // Radial waveforms for current values
+      
       const waveformData = nodesData.map(d => {
         const angleStart = d.theta - sectorAngle / 2
         
-        // Current value radius at sector midpoint (calculate from z-score)
+        
         const r_now = R0 + zToDr(d.z_now, RDelta)
         
-        // Generate smooth waveform using sine interpolation
+        
         const numPoints = 20
         const wavePoints: {x: number, y: number}[] = []
         
@@ -749,7 +749,7 @@ async function main() {
           const t = i / numPoints
           const angle = angleStart + t * sectorAngle
           
-          // Sine-based interpolation from baseline at edges to current value at center
+          
           const sineFactor = Math.sin(t * Math.PI)
           const r = R0 + (r_now - R0) * sineFactor
           
@@ -757,7 +757,7 @@ async function main() {
           wavePoints.push(p)
         }
         
-        // Baseline arc points (for closing the path)
+        
         const baselinePoints: {x: number, y: number}[] = []
         for (let i = numPoints; i >= 0; i--) {
           const t = i / numPoints
@@ -788,7 +788,7 @@ async function main() {
         .attr('stroke-width', d => state.selectedNode === d.id ? 2 : 1)
         .attr('stroke-opacity', 0.9)
 
-      // Z-score labels at sector midpoint
+      
       gNodes.selectAll<SVGTextElement, typeof nodesData[0]>('text.value-label')
         .data(nodesData, d => d.id)
         .join('text')
@@ -803,7 +803,7 @@ async function main() {
         .attr('opacity', 0)
         .text(d => `z=${d.z_now.toFixed(2)}`)
 
-      // Dim non-incident edges when a node is selected (by index to avoid name mismatches)
+      
       if (state.selectedNode) {
         const selIdx = nodesData.find(nd => nd.id === state.selectedNode)?.i
         edgesSel.attr('stroke-opacity', e => {
@@ -825,13 +825,13 @@ async function main() {
     const meta = api.calibration.nodes[nodeId]
     if (!meta) { el.textContent = 'Node data not found'; return }
     
-    // Get display name from NODE_ORDER
+    
     const nodeOrderEntry = NODE_ORDER.find(n => n.id === nodeId)
     const name = nodeOrderEntry?.name || nodeId
     const descKey = normalizeNameForDesc(name)
     const what = WHAT_IT_IS[descKey] || ''
     
-    // Always get current values from series at current time
+    
     const nodeData = series.nodes[nodeId]
     if (!nodeData) { el.textContent = 'Series data not found'; return }
     
@@ -859,14 +859,14 @@ async function main() {
     `
   }
 
-  // Ticker
+  
   function tick() {
     if (state.playing) {
       state.timeIndex = (state.timeIndex + 1) % tSeries.length
       scrubber.value = String(state.timeIndex)
       app.render()
       
-      // Update side panel after render if a node is selected
+      
       if (state.selectedNode) {
         renderDetails(state.selectedNode)
       }
@@ -875,7 +875,7 @@ async function main() {
     setTimeout(tick, delay)
   }
 
-  // condition switching
+  
   conditionSelect.value = condKey
   conditionSelect.addEventListener('change', () => {
     state.condition = parseInt(conditionSelect.value, 10) as any
@@ -890,7 +890,7 @@ async function main() {
     app.render()
   })
 
-  // Esc clears selection; 1-4 switches condition
+  
   window.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') { state.selectedNode = undefined; renderDetails(''); app.render() }
     if (['1','2','3','4'].includes(ev.key)) {
@@ -899,7 +899,7 @@ async function main() {
     }
   })
 
-  // Landing page functions (defined here to access state, app, etc)
+  
   function showLandingStage(index: number) {
     landingStageIndex = Math.max(0, Math.min(LANDING_STAGES.length - 1, index))
     const stage = LANDING_STAGES[landingStageIndex]
@@ -916,7 +916,7 @@ async function main() {
     gEdges.selectAll('.landing-highlight').remove()
     gCondMean.selectAll('.landing-highlight').remove()
     
-    // Remove backdrop dimming for stages 2-6
+    
     const backdrop = landingOverlay.querySelector('.landing-backdrop') as HTMLElement
     if (stageIdx === 0) {
       backdrop.style.background = 'rgba(0,0,0,0.5)'
@@ -926,7 +926,7 @@ async function main() {
     
     switch(stageIdx) {
       case 0:
-        // Stage 1: Large centered, graph dimmed
+        
         landingCard.style.position = 'fixed'
         landingCard.style.left = '50%'
         landingCard.style.top = '50%'
@@ -940,7 +940,7 @@ async function main() {
         break
         
       case 1:
-        // Stage 2: Card moves to side, graph visible
+        
         landingCard.style.position = 'fixed'
         landingCard.style.width = '45%'
         landingCard.style.maxWidth = '400px'
@@ -957,18 +957,18 @@ async function main() {
         break
         
       case 2:
-        // Stage 3: Show waveforms with hue - Heart Rate wave pulses through hue intensity
+        
         svg.style('opacity', '1')
         state.playing = false
         state.timeIndex = Math.floor(tSeries.length / 2)
         scrubber.value = String(state.timeIndex)
         app.render()
-        // Animate Heart Rate waveform hue (Second node, index 1)
+        
         setTimeout(() => {
           const allWaveforms = gNodes.selectAll('path.waveform').nodes()
           if (allWaveforms.length >= 8) {
             const muscleTensionWave = d3.select(allWaveforms[1])
-            // Pulse through hue palette: light -> strong -> light
+            
             muscleTensionWave
               .style('animation', 'hueShift 2s infinite')
           }
@@ -976,10 +976,10 @@ async function main() {
         break
         
       case 3:
-        // Stage 4: Highlight two sample edges (push and pull)
+        
         svg.style('opacity', '1')
         state.playing = false
-        // Ensure no node selection is dimming edges
+        
         state.selectedNode = undefined
         app.render()
 
@@ -989,7 +989,7 @@ async function main() {
             if (attempt < 5) return setTimeout(() => tryHighlightEdges(attempt + 1), 200)
             return
           }
-          // Find one positive sync (push) and one negative sync (pull)
+          
           let pushEdge: SVGPathElement | null = null
           let pullEdge: SVGPathElement | null = null
 
@@ -1016,7 +1016,7 @@ async function main() {
               .raise()
           }
 
-          // If the landing overlay is still active on stage 4, re-apply highlight periodically
+          
           if (landingOverlay.classList.contains('active') && landingStageIndex === 3) {
             setTimeout(() => tryHighlightEdges(0), 600)
           }
@@ -1026,7 +1026,7 @@ async function main() {
         break
         
       case 4:
-        // Stage 5: Switch to stress condition, highlight condition mean
+        
         svg.style('opacity', '1')
         state.condition = 2
         state.playing = false
@@ -1042,11 +1042,11 @@ async function main() {
         break
         
       case 5:
-        // Stage 6: Close card, enable play, show info icon in legend
+        
         svg.style('opacity', '1')
         state.playing = true
         app.render()
-        // Close the overlay after a short delay to let user read the final message
+        
         setTimeout(() => {
           hideLanding()
         }, 2000)
@@ -1074,7 +1074,7 @@ async function main() {
       showLandingStage(0)
     }
     
-    // Set up callback for info icon in legend (start from stage 2)
+    
     reopenTutorial = () => {
       landingStageIndex = 1
       localStorage.removeItem('landingViewed')

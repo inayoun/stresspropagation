@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 SAMPLE_RATE = 4.0
-ALPHA = 1 - math.exp(-1/5.0)  # EMA ~ tau 5 windows
+ALPHA = 1 - math.exp(-1/5.0)
 THETA = 0.25
 C_MIN = 0.25
 N_ON = 3
@@ -31,8 +31,6 @@ for i in range(len(NODE_IDS)):
 
 
 def scale_slopes_per_condition(df: pd.DataFrame) -> pd.DataFrame:
-    # Compute per-node slopes already present: {key}_slope_z
-    # Scale within condition by P95(|slope|) with epsilon guard
     out = df.copy()
     eps = 1e-6
     for _, node_key in NODE_IDS:
@@ -46,7 +44,6 @@ def scale_slopes_per_condition(df: pd.DataFrame) -> pd.DataFrame:
             denom = np.nanpercentile(np.abs(out.loc[m, s_col].astype(float)), 95)
             denom = float(denom) if np.isfinite(denom) and denom > 0 else 1.0
             out.loc[m, s_col+"_scaled"] = out.loc[m, s_col].astype(float) / (denom + eps)
-    # Fill others
     for _, node_key in NODE_IDS:
         col = f"{node_key}_slope_z_scaled"
         if col not in out.columns:
@@ -56,7 +53,6 @@ def scale_slopes_per_condition(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def compute_sync_and_conf(scaled: pd.DataFrame, start_idx: pd.Series, end_idx: pd.Series) -> pd.DataFrame:
-    # For each edge and window compute sync and conf EMA of |sync|
     rows = []
     conf_state: Dict[str, float] = {ek: 0.0 for _,_,ek in EDGE_KEYS}
     hits: Dict[str, int] = {ek: 0 for _,_,ek in EDGE_KEYS}
@@ -66,7 +62,6 @@ def compute_sync_and_conf(scaled: pd.DataFrame, start_idx: pd.Series, end_idx: p
     for idx, row in scaled.iterrows():
         t_mid = float((start_idx.iloc[idx] + end_idx.iloc[idx]) / 2.0 / SAMPLE_RATE)
         cond = int(row['label'])
-        # build slope vector
         svals = []
         for _, node_key in NODE_IDS:
             svals.append(float(row.get(f"{node_key}_slope_z_scaled", 0.0)))
@@ -77,7 +72,6 @@ def compute_sync_and_conf(scaled: pd.DataFrame, start_idx: pd.Series, end_idx: p
             sync = math.copysign(mag, prod) if mag > 0 else 0.0
             sync = float(np.clip(sync, -1.0, 1.0))
             conf_state[ekey] = (1-ALPHA)*conf_state[ekey] + ALPHA*abs(sync)
-            # gate
             if abs(sync) >= THETA and conf_state[ekey] >= C_MIN:
                 hits[ekey] += 1
                 misses[ekey] = 0

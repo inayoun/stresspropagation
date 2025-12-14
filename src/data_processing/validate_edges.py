@@ -37,7 +37,7 @@ def recompute_gate(df: pd.DataFrame) -> pd.Series:
 
 
 def validate_wp3(interim: Path):
-    # Finite sync/conf; gate behavior consistent with spec; HR-BR stress vs baseline check
+
     subjects = sorted(set(p.stem.split('_')[1] for p in interim.glob('edges_*.parquet')))
     ok_finite = True
     ok_gate = True
@@ -46,14 +46,14 @@ def validate_wp3(interim: Path):
         ed = pd.read_parquet(interim / f'edges_{sid}.parquet')
         if not np.isfinite(ed['sync']).all() or not np.isfinite(ed['conf']).all():
             ok_finite = False
-        # Check gate consistency on a few edges to keep it light
+
         for ekey in ed['edge_key'].unique()[:5]:
             seq = ed[ed['edge_key']==ekey].reset_index(drop=True)
             vis_hat = recompute_gate(seq)
             if not np.array_equal(vis_hat.values.astype(bool), seq['visible'].values.astype(bool)):
                 ok_gate = False
                 break
-        # HR<->BR sync_rate stress vs baseline
+
         pair = ed[ed['edge_key']==EDGE_HR_BR]
         if len(pair) > 0:
             base = pair[pair['condition']==1]
@@ -72,12 +72,12 @@ def validate_wp3(interim: Path):
 def validate_wp4(interim: Path):
     nodes = pd.read_parquet(interim / 'group_nodes.parquet')
     edges = pd.read_parquet(interim / 'group_edges.parquet')
-    # Arrays length match per condition
+
     for cond in [1,2,3,4]:
         cond_len_nodes = len(nodes[nodes['condition']==cond]['t'].unique())
         cond_len_edges = len(edges[edges['condition']==cond]['t'].unique())
         assert cond_len_nodes >= 0 and cond_len_edges >= 0
-    # static_conn, sync_rate in [0,1]
+
     assert ((edges['static_conn']>=0) & (edges['static_conn']<=1)).all()
     assert ((edges['sync_rate']>=0) & (edges['sync_rate']<=1)).all()
 

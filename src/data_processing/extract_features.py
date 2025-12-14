@@ -8,13 +8,11 @@ import json
 import os
 import pickle
 
-# Constants
-SAMPLE_RATE = 4  # Hz
+SAMPLE_RATE = 4
 RAW_FS_CHEST = 700.0
 RAW_FS_BVP = 64.0
-WINDOW_SIZE = 60 * SAMPLE_RATE  # 60 seconds * 4 Hz
+WINDOW_SIZE = 60 * SAMPLE_RATE
 
-# Frequency bands for spectral features
 FREQ_BANDS = {
     'hf': (0.15, 0.4),
 }
@@ -42,7 +40,6 @@ def calculate_hrv_from_raw_ecg(ecg_signal_raw: np.ndarray) -> Dict:
         ibi_s = np.diff(r_idx) / RAW_FS_CHEST
         hr_bpm = 60.0 / np.mean(ibi_s)
         rmssd_ms = np.sqrt(np.mean(np.diff(ibi_s) ** 2)) * 1000.0
-        # frequency-domain HRV on RR intervals
         hrv_freq = nk.hrv_frequency(rpeaks, sampling_rate=RAW_FS_CHEST, show=False)
         hf_power = float(hrv_freq['HRV_HF'].iloc[0]) if not hrv_freq.empty else np.nan
         return {'hr_bpm': float(hr_bpm), 'rmssd_ms': float(rmssd_ms), 'hf_power': hf_power}
@@ -53,13 +50,11 @@ def calculate_hrv_from_raw_ecg(ecg_signal_raw: np.ndarray) -> Dict:
 def calculate_resp_features(resp_signal: np.ndarray, sample_rate: float) -> Dict:
     """Calculate respiratory features."""
     try:
-        # Find peaks (inhalation)
-        peaks, _ = signal.find_peaks(resp_signal, distance=sample_rate*0.8)  # At least 0.8s between breaths
+        peaks, _ = signal.find_peaks(resp_signal, distance=sample_rate*0.8)
         
-        # Calculate breath-to-breath intervals
         if len(peaks) > 1:
-            bbi = np.diff(peaks) / sample_rate  # in seconds
-            resp_rate = 60 / np.mean(bbi)  # Breaths per minute
+            bbi = np.diff(peaks) / sample_rate
+            resp_rate = 60 / np.mean(bbi)
             resp_amplitude = np.mean(np.abs(signal.hilbert(resp_signal)))
             
             return {
@@ -110,43 +105,35 @@ def calculate_emg_envelope_from_raw(emg_signal_raw: np.ndarray) -> Dict:
 def extract_window_features(subject_raw: dict, window_data: pd.DataFrame, t0_s: float, t1_s: float) -> Dict:
     """Extract features for the 8 nodes and side-panel metrics in a window."""
     features: Dict[str, float] = {}
-    # Heart: use raw ECG at 700 Hz
     ecg_raw = subject_raw.get('ECG')
     if ecg_raw is not None:
         i0 = int(t0_s * RAW_FS_CHEST)
         i1 = int(t1_s * RAW_FS_CHEST)
         heart = calculate_hrv_from_raw_ecg(ecg_raw[i0:i1])
         features.update(heart)
-    # Breathing: from resampled RESP at 4 Hz
     if 'resp' in window_data.columns:
         resp_features = calculate_resp_features(window_data['resp'].values, SAMPLE_RATE)
         features.update({'resp_rate': resp_features['resp_rate'], 'resp_amplitude': resp_features['resp_amplitude']})
-    # EDA: prefer wrist EDA at 4 Hz else chest-resampled
     eda_col = 'eda_wrist' if 'eda_wrist' in window_data.columns else ('eda_chest' if 'eda_chest' in window_data.columns else None)
     if eda_col:
         eda_features = calculate_eda_features(window_data[eda_col].values, SAMPLE_RATE)
         features.update(eda_features)
-    # Temperature: prefer wrist
     temp_col = 'temp_wrist' if 'temp_wrist' in window_data.columns else ('temp_chest' if 'temp_chest' in window_data.columns else None)
     if temp_col:
         temp_mean = float(np.mean(window_data[temp_col].values))
         features['temperature_mean'] = temp_mean
-    # EMG: from raw 700 Hz chest EMG
     emg_raw = subject_raw.get('EMG')
     if emg_raw is not None:
         i0 = int(t0_s * RAW_FS_CHEST)
         i1 = int(t1_s * RAW_FS_CHEST)
         emg_metrics = calculate_emg_envelope_from_raw(emg_raw[i0:i1])
         features.update(emg_metrics)
-    # ACC magnitude (chest & wrist) if present at 4 Hz
     if 'acc_chest' in window_data.columns:
         features['acc_chest_mag'] = float(np.mean(np.abs(window_data['acc_chest'].values)))
     if 'acc_wrist' in window_data.columns:
         features['acc_wrist_mag'] = float(np.mean(np.abs(window_data['acc_wrist'].values)))
-    # BVP mean
     if 'bvp' in window_data.columns:
         features['bvp_mean'] = float(np.mean(window_data['bvp'].values))
-    # Map to 8 nodes raw values
     features['node_heart_rate'] = features.get('hr_bpm', np.nan)
     features['node_cardiac_rhythm'] = np.nansum([features.get('hf_power', np.nan),
                                                  features.get('rmssd_ms', np.nan)])
@@ -156,8 +143,6 @@ def extract_window_features(subject_raw: dict, window_data: pd.DataFrame, t0_s: 
     features['node_sweat_reactivity'] = features.get('scr_per_min', np.nan)
     features['node_skin_temperature'] = features.get('temperature_mean', np.nan)
     features['node_muscle_tension'] = features.get('emg_envelope_mean', np.nan)
-
-    # Clip ranges to keep values sane per WP2 tests
     if np.isfinite(features.get('node_heart_rate', np.nan)):
         features['node_heart_rate'] = float(np.clip(features['node_heart_rate'], 40.0, 200.0))
     if np.isfinite(features.get('node_breathing_rate', np.nan)):
@@ -188,8 +173,6 @@ def compute_within_subject_dynamics(df: pd.DataFrame) -> pd.DataFrame:
 def process_subject(subject_id: str, data_dir: Path, output_dir: Path, wesad_raw_dir: Path) -> Dict:
     """Process a single subject's data and extract features."""
     print(f"Processing features for subject {subject_id}...")
-    
-    # Load windows metadata
     try:
         windows_meta = load_windows_metadata(subject_id, data_dir)
     except FileNotFoundError:
@@ -197,7 +180,6 @@ def process_subject(subject_id: str, data_dir: Path, output_dir: Path, wesad_raw
         return {}
 
     all_features = []
-    # Load raw pkl once
     pkl_path = wesad_raw_dir / subject_id / f"{subject_id}.pkl"
     with open(pkl_path, 'rb') as f:
         wesad = pickle.load(f, encoding='latin1')
@@ -205,14 +187,11 @@ def process_subject(subject_id: str, data_dir: Path, output_dir: Path, wesad_raw
         'ECG': wesad['signal']['chest'].get('ECG'),
         'EMG': wesad['signal']['chest'].get('EMG'),
     }
-    
-    # Process each window
     for _, window_meta in windows_meta.iterrows():
         window_id = window_meta['window_id']
         
         try:
             window_data = load_window_data(subject_id, window_id, data_dir)
-            # Compute time bounds in seconds from 4 Hz indices
             t0_s = float(window_meta['start_idx']) / SAMPLE_RATE
             t1_s = float(window_meta['end_idx']) / SAMPLE_RATE
             feats = {
@@ -230,32 +209,21 @@ def process_subject(subject_id: str, data_dir: Path, output_dir: Path, wesad_raw
         return {}
     
     features_df = pd.DataFrame(all_features)
-    # Compute within-subject dynamics for node keys
     features_df = compute_within_subject_dynamics(features_df)
-    
-    # Save features
     features_file = output_dir / f"features_{subject_id}.parquet"
     features_df.to_parquet(features_file)
     print(f"Saved features for subject {subject_id} to {features_file}")
-    
-    # Return per-subject raw node series for global calibration aggregation
     calib_source = {k: features_df[k].tolist() for k in NODE_KEYS}
     return {'features_path': str(output_dir / f"features_{subject_id}.parquet"), 'node_raw': calib_source}
 
 def main():
-    # Set up paths
     data_dir = Path("data_processed")
     output_dir = Path("data_interim")
     wesad_raw_dir = Path("data_raw/WESAD")
     output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Get list of subjects (exclude S7)
     subject_dirs = sorted([d for d in data_dir.glob("subject_*_4hz.parquet") if 'S7' not in str(d)])
-    
     pooled_node_values: Dict[str, list] = {k: [] for k in NODE_KEYS}
     subject_ids: List[str] = []
-    
-    # Process each subject
     for subject_file in subject_dirs:
         subject_id = subject_file.stem.split('_')[1]
         result = process_subject(subject_id, data_dir, output_dir, wesad_raw_dir)
@@ -264,9 +232,6 @@ def main():
         subject_ids.append(subject_id)
         for k in NODE_KEYS:
             pooled_node_values[k].extend([v for v in result['node_raw'][k] if pd.notna(v)])
-    
-    # Save calibration data
-    # Build per-node calibration with transforms and units
     calibration = { 'nodes': {} }
     def node_spec(units: str, transform: str = 'identity', inverse: str = 'identity', precision: int = 2):
         return {'units': units, 'transform': transform, 'inverse': inverse, 'precision': precision}
@@ -290,13 +255,10 @@ def main():
         mu = float(np.nanmean(xprime))
         sigma = float(np.nanstd(xprime))
         calibration['nodes'][k] = {**node_meta[k], 'mu': mu, 'sigma': sigma}
-    # Save calibration JSON
     calibration_file = output_dir / "calibration.json"
     with open(calibration_file, 'w') as f:
         json.dump(calibration, f, indent=2)
     print(f"Saved global calibration to {calibration_file}")
-
-    # Write level_z into per-subject features using global calibration
     for subject_id in subject_ids:
         fpath = output_dir / f"features_{subject_id}.parquet"
         if not fpath.exists():
@@ -311,7 +273,6 @@ def main():
                 xprime = raw
             level_z = (xprime - meta['mu']) / (meta['sigma'] + 1e-12)
             sdf[f'{k}_level_z'] = level_z.replace([np.inf, -np.inf], 0.0).fillna(0.0)
-            # Ensure slope_z/accel_z/var_raw have no NaNs
             for suffix in ['slope_z', 'accel_z', 'var_raw']:
                 col = f'{k}_{suffix}'
                 if col in sdf.columns:
