@@ -46,7 +46,7 @@ const landingClose = document.getElementById('landingClose') as HTMLButtonElemen
 
 const LANDING_STAGES = [
   {
-    title: 'Nervous System Dashboard',
+    title: 'Somatic Synthesis',
     text: 'This visualization shows how different physiological systems (heart rate, temperature, and muscle tension) change in response to different emotional states like stress, meditation, and amusement.'
   },
   {
